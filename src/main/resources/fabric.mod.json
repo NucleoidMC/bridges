@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "bridges",
+  "version": "1.0.0-SNAPSHOT",
+  "name": "Bridges",
+  "description": "An implementation of bridges duels on fabric",
+  "authors": [
+    "yitzy299"
+  ],
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "xyz.nucleoid.bridges.Bridges"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.9.1",
+    "fabric": ">=0.30.0",
+    "minecraft": "1.16.x",
+    "plasmid": "0.4.x"
+  }
+}
