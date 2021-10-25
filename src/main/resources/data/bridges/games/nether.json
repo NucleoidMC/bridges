@@ -1,0 +1,36 @@
+{
+  "type": "bridges:bridges",
+  "map": "bridges:nether",
+  "players": {
+    "min": 2,
+    "max": 8
+  },
+  "time_limit_secs": 300,
+  "teams": [
+    {"key": "blue", "name": "Blue", "color": "blue"},
+    {"key": "red", "name": "Red", "color": "red"}
+  ],
+  "point_win_threshold": 5,
+  "items": [
+    {
+      "id": "minecraft:iron_sword",
+      "Count": 1
+    },
+    {
+      "id": "minecraft:iron_axe",
+      "Count": 1
+    },
+    {
+      "id": "minecraft:iron_leggings",
+      "Count": 1
+    },
+    {
+      "id": "minecraft:iron_boots",
+      "Count": 1
+    },
+    {
+      "id": "minecraft:golden_apple",
+      "Count": 8
+    }
+  ]
+}
