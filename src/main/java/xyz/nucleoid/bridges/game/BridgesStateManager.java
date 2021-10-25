@@ -29,7 +29,7 @@ public class BridgesStateManager {
 
     public void onOpen(long time, BridgesConfig config) {
         this.startTime = time - (time % 20) + (4 * 20) + 19;
-        this.finishTime = this.startTime + (config.timeLimitSecs * 20);
+        this.finishTime = this.startTime + (config.timeLimitSecs() * 20L);
     }
 
     public IdleTickResult tick(long time, GameSpace space) {
@@ -52,7 +52,7 @@ public class BridgesStateManager {
             if (!this.setSpectator) {
                 this.setSpectator = true;
                 for (ServerPlayerEntity player : space.getPlayers()) {
-                    player.setGameMode(GameMode.SPECTATOR);
+                    player.changeGameMode(GameMode.SPECTATOR);
                 }
             }
 
@@ -87,7 +87,8 @@ public class BridgesStateManager {
                 Set<Flag> flags = ImmutableSet.of(Flag.X_ROT, Flag.Y_ROT);
 
                 // Teleport without changing the pitch and yaw
-                player.networkHandler.teleportRequest(destX, destY, destZ, player.yaw, player.pitch, flags);
+                player.teleport(player.getServerWorld(), destX, destY, destZ, player.getYaw(), player.getPitch());
+                //player.networkHandler.teleportRequest(destX, destY, destZ, player.yaw, player.pitch, flags);
             }
         }
 
@@ -97,11 +98,11 @@ public class BridgesStateManager {
             PlayerSet players = space.getPlayers();
 
             if (sec > 0) {
-                players.sendTitle(new LiteralText(Integer.toString(sec)).formatted(Formatting.BOLD));
-                players.sendSound(SoundEvents.BLOCK_NOTE_BLOCK_HARP, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                players.showTitle(new LiteralText(Integer.toString(sec)).formatted(Formatting.BOLD), 5);
+                players.playSound(SoundEvents.BLOCK_NOTE_BLOCK_HARP, SoundCategory.PLAYERS, 1.0F, 1.0F);
             } else {
-                players.sendTitle(new LiteralText("Go!").formatted(Formatting.BOLD));
-                players.sendSound(SoundEvents.BLOCK_NOTE_BLOCK_HARP, SoundCategory.PLAYERS, 1.0F, 2.0F);
+                players.showTitle(new LiteralText("Go!").formatted(Formatting.BOLD), 10);
+                players.playSound(SoundEvents.BLOCK_NOTE_BLOCK_HARP, SoundCategory.PLAYERS, 1.0F, 2.0F);
             }
         }
     }

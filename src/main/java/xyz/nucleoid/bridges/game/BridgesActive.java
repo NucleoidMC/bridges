@@ -2,105 +2,138 @@ package xyz.nucleoid.bridges.game;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.minecraft.util.ActionResult;
-import xyz.nucleoid.bridges.game.map.BridgesMap;
-import xyz.nucleoid.plasmid.game.GameSpace;
-import xyz.nucleoid.plasmid.game.event.*;
-import xyz.nucleoid.plasmid.game.player.JoinResult;
-import xyz.nucleoid.plasmid.game.player.PlayerSet;
-import xyz.nucleoid.plasmid.game.rule.GameRule;
-import xyz.nucleoid.plasmid.game.rule.RuleResult;
-import xyz.nucleoid.plasmid.widget.GlobalWidgets;
-import xyz.nucleoid.plasmid.util.PlayerRef;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.item.ArmorItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsageContext;
+import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
+import xyz.nucleoid.bridges.game.map.BridgesMap;
+import xyz.nucleoid.plasmid.game.GameCloseReason;
+import xyz.nucleoid.plasmid.game.GameSpace;
+import xyz.nucleoid.plasmid.game.common.GlobalWidgets;
+import xyz.nucleoid.plasmid.game.common.team.*;
+import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
+import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
+import xyz.nucleoid.plasmid.game.player.PlayerSet;
+import xyz.nucleoid.plasmid.game.rule.GameRuleType;
+import xyz.nucleoid.plasmid.util.PlayerRef;
+import xyz.nucleoid.stimuli.event.block.BlockBreakEvent;
+import xyz.nucleoid.stimuli.event.block.BlockPlaceEvent;
+import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BridgesActive {
     private final BridgesConfig config;
 
     public final GameSpace gameSpace;
-    private final BridgesMap gameMap;
 
-    // TODO replace with ServerPlayerEntity if players are removed upon leaving
     private final Object2ObjectMap<PlayerRef, BridgesPlayer> participants;
+    private final Map<GameTeamKey, BridgesTeamState> teamStates = new Reference2ObjectOpenHashMap<>();
+
+    private final TeamManager teams;
+    private final BridgesMap map;
+
     private final BridgesSpawnLogic spawnLogic;
     private final BridgesStateManager stageManager;
-    private final boolean ignoreWinState;
     private final BridgesTimerBar timerBar;
+    private final BridgesScoreboard scoreboard;
+    private final ServerWorld world;
 
-    private BridgesActive(GameSpace gameSpace, BridgesMap map, GlobalWidgets widgets, BridgesConfig config, Set<PlayerRef> participants) {
+    private BridgesActive(GameSpace gameSpace, BridgesMap map, GlobalWidgets widgets, BridgesConfig config, ServerWorld world, TeamManager manager) {
         this.gameSpace = gameSpace;
         this.config = config;
-        this.gameMap = map;
-        this.spawnLogic = new BridgesSpawnLogic(gameSpace, map);
+        this.spawnLogic = new BridgesSpawnLogic(gameSpace, map, world);
         this.participants = new Object2ObjectOpenHashMap<>();
-
-        for (PlayerRef player : participants) {
-            this.participants.put(player, new BridgesPlayer());
-        }
+        this.teams = manager;
+        this.map = map;
 
         this.stageManager = new BridgesStateManager();
-        this.ignoreWinState = this.participants.size() <= 1;
         this.timerBar = new BridgesTimerBar(widgets);
+        this.scoreboard = new BridgesScoreboard(widgets);
+        this.world = world;
     }
 
-    public static void open(GameSpace gameSpace, BridgesMap map, BridgesConfig config) {
-        gameSpace.openGame(game -> {
-            Set<PlayerRef> participants = gameSpace.getPlayers().stream()
-                    .map(PlayerRef::of)
-                    .collect(Collectors.toSet());
-            GlobalWidgets widgets = new GlobalWidgets(game);
-            BridgesActive active = new BridgesActive(gameSpace, map, widgets, config, participants);
+    public static void open(GameSpace gameSpace, BridgesMap map, BridgesConfig config, ServerWorld world, HashMap<GameTeamKey, ServerPlayerEntity> players) {
+        gameSpace.setActivity(game -> {
+            GlobalWidgets widgets = GlobalWidgets.addTo(game);
+            TeamManager manager = TeamManager.addTo(game);
+            BridgesActive active = new BridgesActive(gameSpace, map, widgets, config, world, manager);
+            active.addTeams(config.teams());
+            active.initPlayers(players);
 
-            game.setRule(GameRule.CRAFTING, RuleResult.DENY);
-            game.setRule(GameRule.PORTALS, RuleResult.DENY);
-            game.setRule(GameRule.PVP, RuleResult.DENY);
-            game.setRule(GameRule.HUNGER, RuleResult.DENY);
-            game.setRule(GameRule.FALL_DAMAGE, RuleResult.DENY);
-            game.setRule(GameRule.INTERACTION, RuleResult.DENY);
-            game.setRule(GameRule.BLOCK_DROPS, RuleResult.DENY);
-            game.setRule(GameRule.THROW_ITEMS, RuleResult.DENY);
-            game.setRule(GameRule.UNSTABLE_TNT, RuleResult.DENY);
+            TeamChat.addTo(game, manager);
 
-            game.on(GameOpenListener.EVENT, active::onOpen);
-            game.on(GameCloseListener.EVENT, active::onClose);
+            game.setRule(GameRuleType.CRAFTING, ActionResult.FAIL);
+            game.setRule(GameRuleType.PORTALS, ActionResult.FAIL);
+            game.setRule(GameRuleType.PVP, ActionResult.PASS);
+            game.setRule(GameRuleType.HUNGER, ActionResult.PASS);
+            game.setRule(GameRuleType.FALL_DAMAGE, ActionResult.PASS);
+            game.setRule(GameRuleType.BREAK_BLOCKS, ActionResult.PASS);
+            game.setRule(GameRuleType.PLACE_BLOCKS, ActionResult.PASS);
+            game.setRule(GameRuleType.BLOCK_DROPS, ActionResult.PASS);
+            game.setRule(GameRuleType.THROW_ITEMS, ActionResult.FAIL);
+            game.setRule(GameRuleType.UNSTABLE_TNT, ActionResult.FAIL);
 
-            game.on(OfferPlayerListener.EVENT, player -> JoinResult.ok());
-            game.on(PlayerAddListener.EVENT, active::addPlayer);
-            game.on(PlayerRemoveListener.EVENT, active::removePlayer);
+            game.listen(GameActivityEvents.CREATE, active::onOpen);
+            game.listen(GameActivityEvents.DESTROY, active::onClose);
 
-            game.on(GameTickListener.EVENT, active::tick);
+            game.listen(GamePlayerEvents.JOIN, (active::spawnSpectator));
+            game.listen(GamePlayerEvents.ADD, (active::addPlayer));
+            game.listen(GamePlayerEvents.LEAVE, active::removePlayer);
 
-            game.on(PlayerDamageListener.EVENT, active::onPlayerDamage);
-            game.on(PlayerDeathListener.EVENT, active::onPlayerDeath);
+            game.listen(GameActivityEvents.TICK, active::tick);
+
+            game.listen(PlayerDeathEvent.EVENT, active::onPlayerDeath);
+            game.listen(BlockBreakEvent.EVENT, active::onBlockBreak);
+            game.listen(BlockPlaceEvent.BEFORE, active::onBlockPlace);
         });
     }
 
     private void onOpen() {
-        ServerWorld world = this.gameSpace.getWorld();
+        ServerWorld world = this.world;
         for (PlayerRef ref : this.participants.keySet()) {
             ref.ifOnline(world, this::spawnParticipant);
         }
         this.stageManager.onOpen(world.getTime(), this.config);
-        // TODO setup logic
     }
 
-    private void onClose() {
-        // TODO teardown logic
+    private void onClose(GameCloseReason reason) {
+        this.participants.forEach(((playerRef, bridgesPlayer) -> {
+            bridgesPlayer.player().getInventory().clear();
+            bridgesPlayer.player().setHealth(bridgesPlayer.player().getMaxHealth());
+        }));
+    }
+
+    private void initPlayers(Map<GameTeamKey, ServerPlayerEntity> players) {
+        players.forEach((teamKey, player) -> {
+            var teamConfig = this.teams.getTeamConfig(teamKey);
+            var participant = new BridgesPlayer(player, new GameTeam(teamKey, teamConfig));
+            this.participants.put(PlayerRef.of(player), participant);
+            this.teams.addPlayerTo(player, teamKey);
+        });
     }
 
     private void addPlayer(ServerPlayerEntity player) {
+        player.getInventory().clear();
         if (!this.participants.containsKey(PlayerRef.of(player))) {
             this.spawnSpectator(player);
+        } else {
+            spawnParticipant(player);
         }
     }
 
@@ -108,30 +141,39 @@ public class BridgesActive {
         this.participants.remove(PlayerRef.of(player));
     }
 
-    private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
-        // TODO handle damage
-        this.spawnParticipant(player);
-        return ActionResult.FAIL;
-    }
-
     private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
-        // TODO handle death
         this.spawnParticipant(player);
         return ActionResult.FAIL;
     }
 
     private void spawnParticipant(ServerPlayerEntity player) {
-        this.spawnLogic.resetPlayer(player, GameMode.ADVENTURE);
-        this.spawnLogic.spawnPlayer(player);
+        this.spawnLogic.resetPlayer(player, GameMode.SURVIVAL);
+
+        var bridgesPlayer = this.participants.get(PlayerRef.of(player));
+
+        player.getInventory().clear();
+        for (ItemStack stack : config.items()) {
+            if (stack.getItem() instanceof ArmorItem item) {
+                player.equipStack(item.getSlotType(), stack);
+            } else {
+                player.getInventory().insertStack(stack.copy());
+            }
+        }
+
+        var terracotta = bridgesPlayer.team().config().applyDye(new ItemStack(Blocks.TERRACOTTA, 64));
+        for (int i = 0; i < 3; i++) {
+            bridgesPlayer.player().getInventory().insertStack(terracotta.copy());
+        }
+        this.spawnLogic.spawnPlayer(bridgesPlayer);
     }
 
     private void spawnSpectator(ServerPlayerEntity player) {
         this.spawnLogic.resetPlayer(player, GameMode.SPECTATOR);
-        this.spawnLogic.spawnPlayer(player);
+        this.spawnLogic.spawnPlayer(this.participants.get(PlayerRef.of(player)));
     }
 
     private void tick() {
-        ServerWorld world = this.gameSpace.getWorld();
+        ServerWorld world = this.world;
         long time = world.getTime();
 
         BridgesStateManager.IdleTickResult result = this.stageManager.tick(time, gameSpace);
@@ -145,66 +187,82 @@ public class BridgesActive {
                 this.broadcastWin(this.checkWinResult());
                 return;
             case GAME_CLOSED:
-                this.gameSpace.close();
+                this.gameSpace.close(GameCloseReason.CANCELED);
                 return;
         }
 
-        this.timerBar.update(this.stageManager.finishTime - time, this.config.timeLimitSecs * 20);
+        this.timerBar.update(this.stageManager.finishTime - time, this.config.timeLimitSecs() * 20L);
+        this.scoreboard.updateScoreboard(teamStates.values());
 
-        // TODO tick logic
+        participants.values().stream().filter(this.map::isInGoal).forEach(bridgesPlayer -> {
+            spawnParticipant(bridgesPlayer.player());
+            teamStates.get(bridgesPlayer.team().key()).score++;
+            bridgesPlayer.player().playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        });
+
+        if (this.checkWinResult().team() != null) {
+            broadcastWin(this.checkWinResult());
+            gameSpace.close(GameCloseReason.FINISHED);
+        }
     }
 
     private void broadcastWin(WinResult result) {
-        ServerPlayerEntity winningPlayer = result.getWinningPlayer();
+        var team = result.team;
 
         Text message;
-        if (winningPlayer != null) {
-            message = winningPlayer.getDisplayName().shallowCopy().append(" has won the game!").formatted(Formatting.GOLD);
+        if (team != null) {
+            message = new TranslatableText("text.bridges.win", team.config().name()).formatted(Formatting.GOLD);
         } else {
-            message = new LiteralText("The game ended, but nobody won!").formatted(Formatting.GOLD);
+            message = new TranslatableText("text.bridges.no_win").formatted(Formatting.GOLD);
         }
 
         PlayerSet players = this.gameSpace.getPlayers();
         players.sendMessage(message);
-        players.sendSound(SoundEvents.ENTITY_VILLAGER_YES);
     }
 
     private WinResult checkWinResult() {
-        // for testing purposes: don't end the game if we only ever had one participant
-        if (this.ignoreWinState) {
-            return WinResult.no();
-        }
 
-        ServerWorld world = this.gameSpace.getWorld();
-        ServerPlayerEntity winningPlayer = null;
-
-        // TODO win result logic
-        return WinResult.no();
+        var winner = this.teamStates.values().stream().filter(state -> state.score >= this.config.pointWinThreshold()).findFirst();
+        return winner.map(bridgesTeamState -> WinResult.win(bridgesTeamState.team)).orElseGet(WinResult::no);
     }
 
-    static class WinResult {
-        final ServerPlayerEntity winningPlayer;
-        final boolean win;
-
-        private WinResult(ServerPlayerEntity winningPlayer, boolean win) {
-            this.winningPlayer = winningPlayer;
-            this.win = win;
+    private ActionResult onBlockBreak(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
+        if (map.allowBlockInteractions(pos)) {
+            return ActionResult.PASS;
         }
+        return ActionResult.FAIL;
+    }
+
+    private ActionResult onBlockPlace(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState blockState, ItemUsageContext itemUsageContext) {
+        if (map.allowBlockInteractions(pos)) {
+            return ActionResult.PASS;
+        }
+        return ActionResult.FAIL;
+    }
+
+    private void addTeams(GameTeamList teams) {
+        for (var team : teams) {
+            var config = GameTeamConfig.builder(team.config())
+                    .setCollision(AbstractTeam.CollisionRule.NEVER)
+                    .setFriendlyFire(false)
+                    .build();
+
+            var newTeam = new GameTeam(team.key(), config);
+            this.teams.addTeam(newTeam);
+
+            this.teamStates.put(team.key(), new BridgesTeamState(newTeam));
+        }
+        map.updateTeams(teams);
+    }
+
+    record WinResult(GameTeam team) {
 
         static WinResult no() {
-            return new WinResult(null, false);
+            return new WinResult(null);
         }
 
-        static WinResult win(ServerPlayerEntity player) {
-            return new WinResult(player, true);
-        }
-
-        public boolean isWin() {
-            return this.win;
-        }
-
-        public ServerPlayerEntity getWinningPlayer() {
-            return this.winningPlayer;
+        static WinResult win(GameTeam team) {
+            return new WinResult(team);
         }
     }
 }

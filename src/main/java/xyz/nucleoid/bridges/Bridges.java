@@ -13,8 +13,8 @@ public class Bridges implements ModInitializer {
     public static final Logger LOGGER = LogManager.getLogger(ID);
     public static final GameType<BridgesConfig> TYPE = GameType.register(
             new Identifier(Bridges.ID, "bridges"),
-            BridgesWaiting::open,
-            BridgesConfig.CODEC
+            BridgesConfig.CODEC,
+            BridgesWaiting::open
     );
     @Override
     public void onInitialize() {
