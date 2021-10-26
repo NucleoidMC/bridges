@@ -38,7 +38,10 @@ public class BridgesMap {
             if (getRegions(bridgesPlayer.team()).goal.asBox().contains(player.getPos())) return false;
             return teamRegions.goal.asBox().contains(player.getPos());
         });
-
+    }
+    public boolean isInOwnGoal(BridgesPlayer bridgesPlayer) {
+        var player = bridgesPlayer.player();
+        return this.teamRegions.values().stream().anyMatch(teamRegions -> getRegions(bridgesPlayer.team()).goal.contains(player.getBlockPos()));
     }
 
     public ChunkGenerator asGenerator(MinecraftServer server) {

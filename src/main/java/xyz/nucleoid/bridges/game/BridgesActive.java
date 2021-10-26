@@ -160,6 +160,8 @@ public class BridgesActive {
             }
         }
 
+        //TODO fix this
+        //bridgesPlayer.team().config().blockDyeColor()
         var terracotta = bridgesPlayer.team().config().applyDye(new ItemStack(Blocks.TERRACOTTA, 64));
         for (int i = 0; i < 3; i++) {
             bridgesPlayer.player().getInventory().insertStack(terracotta.copy());
@@ -194,11 +196,15 @@ public class BridgesActive {
         this.timerBar.update(this.stageManager.finishTime - time, this.config.timeLimitSecs() * 20L);
         this.scoreboard.updateScoreboard(teamStates.values());
 
-        participants.values().stream().filter(this.map::isInGoal).forEach(bridgesPlayer -> {
+        this.participants.values().stream().filter(this.map::isInGoal).forEach(bridgesPlayer -> {
             spawnParticipant(bridgesPlayer.player());
             teamStates.get(bridgesPlayer.team().key()).score++;
             bridgesPlayer.player().playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.0F);
         });
+
+        this.participants.values().stream().filter(this.map::isInOwnGoal).forEach(
+                bridgesPlayer -> spawnParticipant(bridgesPlayer.player())
+        );
 
         if (this.checkWinResult().team() != null) {
             broadcastWin(this.checkWinResult());
