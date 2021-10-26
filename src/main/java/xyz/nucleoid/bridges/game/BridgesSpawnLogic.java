@@ -38,7 +38,7 @@ public class BridgesSpawnLogic {
     }
 
     public void spawnPlayer(BridgesPlayer player) {
-        BlockPos pos = this.map.center;
+        Vec3d pos = this.map.center;
         if (pos == null) {
             Bridges.LOGGER.error("Cannot spawn player! No spawn is defined in the map!");
             return;
@@ -49,16 +49,16 @@ public class BridgesSpawnLogic {
         var spawnPos = positions.get(player.player().getRandom().nextInt(positions.size()));
 
         player.player().teleport(world, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), 0.0F, 0.0F);
-        player.player().lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, Vec3d.ofCenter(pos));
+        player.player().lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, pos);
     }
 
     public void spawnPlayerAtCenter(ServerPlayerEntity player) {
-        BlockPos pos = this.map.center;
+        Vec3d pos = this.map.center;
         if (pos == null) {
             Bridges.LOGGER.error("Cannot spawn player! No spawn is defined in the map!");
             return;
         }
         player.teleport(world, pos.getX(), pos.getY(), pos.getZ(), 0.0F, 0.0F);
-        player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, Vec3d.ofCenter(pos));
+        player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, pos);
     }
 }

@@ -73,8 +73,8 @@ public class BridgesWaiting {
     }
 
     private PlayerOfferResult addPlayer(PlayerOffer offer) {
-        this.spawnPlayer(offer.player());
-        return offer.accept(this.world, new Vec3d(0, 20, 0));
+        return offer.accept(this.world, this.map.center)
+                .and(() -> spawnPlayer(offer.player()));
     }
 
     private void onPlayerDeath(ServerPlayerEntity player) {

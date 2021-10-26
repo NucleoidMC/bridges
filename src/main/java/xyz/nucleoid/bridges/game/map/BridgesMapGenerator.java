@@ -23,12 +23,8 @@ public class BridgesMapGenerator {
         } catch (IOException ignored) {
 
         }
-        BridgesMap map = new BridgesMap(template);
 
-        //this.buildSpawn(template);
-        map.center = new BlockPos(0,65,0);
-
-        return map;
+        return new BridgesMap(template);
     }
 
 }

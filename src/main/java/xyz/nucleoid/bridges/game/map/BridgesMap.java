@@ -3,6 +3,7 @@ package xyz.nucleoid.bridges.game.map;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import xyz.nucleoid.bridges.game.BridgesConfig;
 import xyz.nucleoid.bridges.game.BridgesPlayer;
@@ -19,10 +20,12 @@ import java.util.Map;
 public class BridgesMap {
     private final MapTemplate template;
     private final Map<GameTeamKey, TeamRegions> teamRegions = new Reference2ObjectOpenHashMap<>();
-    public BlockPos center;
+    public Vec3d center;
 
     public BridgesMap(MapTemplate template) {
         this.template = template;
+        var bounds = template.getMetadata().getFirstRegionBounds("center");
+        this.center = bounds == null ? new Vec3d(0, 80, 0) : bounds.center();
     }
 
     public TeamRegions getRegions(GameTeam team) {
