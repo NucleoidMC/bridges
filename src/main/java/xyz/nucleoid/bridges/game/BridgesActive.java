@@ -29,6 +29,7 @@ import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
 import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
 import xyz.nucleoid.plasmid.game.player.PlayerSet;
 import xyz.nucleoid.plasmid.game.rule.GameRuleType;
+import xyz.nucleoid.plasmid.util.ColoredBlocks;
 import xyz.nucleoid.plasmid.util.PlayerRef;
 import xyz.nucleoid.stimuli.event.block.BlockBreakEvent;
 import xyz.nucleoid.stimuli.event.block.BlockPlaceEvent;
@@ -160,9 +161,7 @@ public class BridgesActive {
             }
         }
 
-        //TODO fix this
-        //bridgesPlayer.team().config().blockDyeColor()
-        var terracotta = bridgesPlayer.team().config().applyDye(new ItemStack(Blocks.TERRACOTTA, 64));
+        var terracotta = bridgesPlayer.team().config().applyDye(new ItemStack(ColoredBlocks.terracotta(bridgesPlayer.team().config().blockDyeColor()), 64));
         for (int i = 0; i < 3; i++) {
             bridgesPlayer.player().getInventory().insertStack(terracotta.copy());
         }
