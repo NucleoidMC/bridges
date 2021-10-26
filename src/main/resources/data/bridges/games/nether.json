@@ -17,6 +17,10 @@
       "Count": 1
     },
     {
+      "id": "minecraft:iron_pickaxe",
+      "Count": 1
+    },
+    {
       "id": "minecraft:iron_axe",
       "Count": 1
     },
@@ -30,7 +34,7 @@
     },
     {
       "id": "minecraft:golden_apple",
-      "Count": 8
+      "Count": 3
     }
   ]
 }
