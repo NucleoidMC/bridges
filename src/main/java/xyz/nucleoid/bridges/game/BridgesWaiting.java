@@ -83,7 +83,6 @@ public class BridgesWaiting {
     }
 
     private void spawnPlayer(ServerPlayerEntity player) {
-        this.spawnLogic.resetPlayer(player, GameMode.SURVIVAL);
         this.spawnLogic.spawnPlayerAtCenter(player);
     }
 }
