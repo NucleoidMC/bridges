@@ -1,0 +1,10 @@
+{
+  "text.bridges.win": "%d hat gewonnen!",
+  "text.bridges.no_win": "Es gab keinen Gewinner!",
+  "text.bridges.scored": "%d hat einen Punkt erzielt",
+  "text.bridges.waiting_start": "Warten auf Spieler…",
+  "text.bridges.time_left": "%02d:%02d hat das Spiel verlassen",
+  "text.bridges.team_score": "%d : %d",
+
+  "gameType.bridges.bridges": "Bridges"
+}
