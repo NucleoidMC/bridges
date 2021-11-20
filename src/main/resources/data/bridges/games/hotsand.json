@@ -1,6 +1,6 @@
 {
   "type": "bridges:bridges",
-  "map": "bridges:nether",
+  "map": "bridges:hotsand",
   "players": {
     "min": 2,
     "max": 2
