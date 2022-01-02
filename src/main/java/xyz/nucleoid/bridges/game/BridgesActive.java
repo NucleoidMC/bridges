@@ -20,6 +20,8 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.World;
+import xyz.nucleoid.bridges.Bridges;
 import xyz.nucleoid.bridges.game.map.BridgesMap;
 import xyz.nucleoid.plasmid.game.GameCloseReason;
 import xyz.nucleoid.plasmid.game.GameSpace;
@@ -102,6 +104,7 @@ public class BridgesActive {
             game.listen(PlayerDeathEvent.EVENT, active::onPlayerDeath);
             game.listen(BlockBreakEvent.EVENT, active::onBlockBreak);
             game.listen(BlockPlaceEvent.BEFORE, active::onBlockPlace);
+            Bridges.GAMES.put(gameSpace, active);
         });
     }
 
@@ -118,6 +121,7 @@ public class BridgesActive {
             bridgesPlayer.player().getInventory().clear();
             bridgesPlayer.player().setHealth(bridgesPlayer.player().getMaxHealth());
         }));
+        Bridges.GAMES.remove(this.gameSpace);
     }
 
     private void initPlayers(Map<GameTeamKey, ServerPlayerEntity> players) {
@@ -195,19 +199,26 @@ public class BridgesActive {
         this.timerBar.update(this.stageManager.finishTime - time, this.config.timeLimitSecs() * 20L);
         this.scoreboard.updateScoreboard(teamStates.values());
 
-        this.participants.values().stream().filter(this.map::isInGoal).forEach(bridgesPlayer -> {
-            spawnParticipant(bridgesPlayer.player());
-            teamStates.get(bridgesPlayer.team().key()).score++;
-            bridgesPlayer.player().playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.0F);
-        });
-
-        this.participants.values().stream().filter(this.map::isInOwnGoal).forEach(
-                bridgesPlayer -> spawnParticipant(bridgesPlayer.player())
-        );
-
         if (this.checkWinResult().team() != null) {
             broadcastWin(this.checkWinResult());
             gameSpace.close(GameCloseReason.FINISHED);
+        }
+    }
+
+    public void tickPlayerInGoal(ServerPlayerEntity player) {
+        var playerTeam = this.teams.teamFor(player);
+        if (this.map.getRegions(playerTeam).goal().contains(player.getBlockPos())) {
+            // Player is in own goal
+            this.spawnParticipant(player);
+        } else {
+            teams.forEach(team -> {
+                if (this.map.getRegions(team).goal().contains(player.getBlockPos())) {
+                    // Player is in goal but not in own goal
+                    this.spawnParticipant(player);
+                    teamStates.get(playerTeam).score++;
+                    player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                }
+            });
         }
     }
 
@@ -226,7 +237,6 @@ public class BridgesActive {
     }
 
     private WinResult checkWinResult() {
-
         var winner = this.teamStates.values().stream().filter(state -> state.score >= this.config.pointWinThreshold()).findFirst();
         return winner.map(bridgesTeamState -> WinResult.win(bridgesTeamState.team)).orElseGet(WinResult::no);
     }
@@ -257,7 +267,11 @@ public class BridgesActive {
 
             this.teamStates.put(team.key(), new BridgesTeamState(newTeam));
         }
-        map.updateTeams(teams);
+        map.updateTeams(teams, this);
+    }
+
+    public ServerWorld getWorld() {
+        return this.world;
     }
 
     record WinResult(GameTeam team) {

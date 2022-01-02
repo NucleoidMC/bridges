@@ -18,9 +18,9 @@
     "bridges.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.9.1",
-    "fabric": ">=0.30.0",
-    "minecraft": "1.17.x",
+    "fabricloader": ">=0.12.6",
+    "fabric": ">=0.44.0",
+    "minecraft": "1.18.x",
     "plasmid": "0.5.x"
   }
 }

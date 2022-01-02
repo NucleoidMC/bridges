@@ -1,17 +1,16 @@
 plugins {
-    id 'fabric-loom' version '0.9-SNAPSHOT'
+    id 'fabric-loom' version '0.10.+'
     id 'maven-publish'
 }
 
-sourceCompatibility = JavaVersion.VERSION_16
-targetCompatibility = JavaVersion.VERSION_16
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version
 group = project.maven_group
 
 repositories {
-    maven { url = "https://jitpack.io/" }
     maven { url = "https://maven.nucleoid.xyz/" }
     mavenLocal()
 }
@@ -25,9 +24,7 @@ dependencies {
 
     modImplementation "xyz.nucleoid:plasmid:${project.plasmid_version}"
 
-    modRuntime ("com.github.SuperCoder7979:databreaker:0.2.6") {
-        exclude module : "fabric-loader"
-    }
+    modImplementation(include("eu.pb4:polymer:0.2.0-beta.9+1.18.1"))
 }
 
 processResources {

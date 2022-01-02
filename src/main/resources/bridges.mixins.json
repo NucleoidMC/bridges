@@ -1,8 +1,7 @@
 {
   "required": true,
-  "package": "xyz.nucleoid.bridges.mixin",
+  "package": "xyz.nucleoid.bridges.mixins",
   "mixins": [
-    "EndPortalBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1

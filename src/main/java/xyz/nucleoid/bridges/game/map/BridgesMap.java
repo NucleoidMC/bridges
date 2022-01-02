@@ -5,12 +5,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import xyz.nucleoid.bridges.game.BridgesConfig;
-import xyz.nucleoid.bridges.game.BridgesPlayer;
+import xyz.nucleoid.bridges.Bridges;
+import xyz.nucleoid.bridges.game.BridgesActive;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
 import xyz.nucleoid.plasmid.game.common.team.GameTeam;
-import xyz.nucleoid.plasmid.game.common.team.GameTeamConfig;
 import xyz.nucleoid.plasmid.game.common.team.GameTeamKey;
 import xyz.nucleoid.plasmid.game.common.team.GameTeamList;
 import xyz.nucleoid.plasmid.game.world.generator.TemplateChunkGenerator;
@@ -32,29 +31,28 @@ public class BridgesMap {
         return teamRegions.get(team.key());
     }
 
-    public boolean isInGoal(BridgesPlayer bridgesPlayer) {
-        var player = bridgesPlayer.player();
-        return this.teamRegions.values().stream().anyMatch(teamRegions -> {
-            if (getRegions(bridgesPlayer.team()).goal.asBox().contains(player.getPos())) return false;
-            return teamRegions.goal.asBox().contains(player.getPos());
-        });
-    }
-    public boolean isInOwnGoal(BridgesPlayer bridgesPlayer) {
-        var player = bridgesPlayer.player();
-        return this.teamRegions.values().stream().anyMatch(teamRegions -> getRegions(bridgesPlayer.team()).goal.contains(player.getBlockPos()));
+    public TeamRegions getRegions(GameTeamKey team) {
+        return teamRegions.get(team);
     }
 
     public ChunkGenerator asGenerator(MinecraftServer server) {
         return new TemplateChunkGenerator(server, this.template);
     }
 
-    public void updateTeams(GameTeamList teams) {
+    public void updateTeams(GameTeamList teams, BridgesActive active) {
         teams.forEach(team -> {
             var id = team.key().id();
             var spawn = template.getMetadata().getFirstRegionBounds(id + "_spawn");
             var goal = template.getMetadata().getFirstRegionBounds(id + "_goal");
             var base = template.getMetadata().getFirstRegionBounds(id + "_base");
             this.teamRegions.put(team.key(), new TeamRegions(spawn, goal, base));
+            if (goal == null) {
+                throw new IllegalStateException("No goal provided for team " + team.key().id());
+            }
+            goal.forEach(pos -> {
+                // Set the goal to be composed of goal blocks
+                active.getWorld().setBlockState(pos, Bridges.BRIDGES_GOAL_BLOCK.getDefaultState());
+            });
         });
     }
 

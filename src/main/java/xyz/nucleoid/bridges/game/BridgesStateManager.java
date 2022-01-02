@@ -87,7 +87,7 @@ public class BridgesStateManager {
                 Set<Flag> flags = ImmutableSet.of(Flag.X_ROT, Flag.Y_ROT);
 
                 // Teleport without changing the pitch and yaw
-                player.teleport(player.getServerWorld(), destX, destY, destZ, player.getYaw(), player.getPitch());
+                player.teleport(player.getWorld(), destX, destY, destZ, player.getYaw(), player.getPitch());
                 //player.networkHandler.teleportRequest(destX, destY, destZ, player.yaw, player.pitch, flags);
             }
         }
