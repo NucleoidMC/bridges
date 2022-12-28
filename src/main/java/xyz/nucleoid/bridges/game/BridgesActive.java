@@ -15,7 +15,6 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
@@ -227,9 +226,9 @@ public class BridgesActive {
 
         Text message;
         if (team != null) {
-            message = new TranslatableText("text.bridges.win", team.config().name()).formatted(Formatting.GOLD);
+            message = Text.translatable("text.bridges.win", team.config().name()).formatted(Formatting.GOLD);
         } else {
-            message = new TranslatableText("text.bridges.no_win").formatted(Formatting.GOLD);
+            message = Text.translatable("text.bridges.no_win").formatted(Formatting.GOLD);
         }
 
         PlayerSet players = this.gameSpace.getPlayers();

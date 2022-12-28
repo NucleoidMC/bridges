@@ -1,6 +1,6 @@
 package xyz.nucleoid.bridges.game;
 
-import eu.pb4.polymer.api.block.PolymerBlock;
+import eu.pb4.polymer.core.api.block.PolymerBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -29,7 +29,7 @@ public class BridgesGoalBlock extends Block implements PolymerBlock {
     }
 
     @Override
-    public boolean shouldSyncWithPolymerClient(ServerPlayerEntity player) {
+    public boolean canSynchronizeToPolymerClient(ServerPlayerEntity player) {
         return false;
     }
 

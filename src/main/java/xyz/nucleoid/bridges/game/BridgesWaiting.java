@@ -1,11 +1,11 @@
 package xyz.nucleoid.bridges.game;
 
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import xyz.nucleoid.bridges.game.map.BridgesMap;
@@ -51,7 +51,7 @@ public class BridgesWaiting {
         RuntimeWorldConfig worldConfig = new RuntimeWorldConfig()
                 .setGenerator(map.asGenerator(server))
                 .setGameRule(GameRules.KEEP_INVENTORY, false)
-                .setDimensionType(RegistryKey.of(Registry.DIMENSION_TYPE_KEY, context.config().dimension()));
+                .setDimensionType(RegistryKey.of(RegistryKeys.DIMENSION_TYPE, context.config().dimension()));
 
         return context.openWithWorld(worldConfig, (game, world) -> {
             GameWaitingLobby.addTo(game, config.playerConfig());
